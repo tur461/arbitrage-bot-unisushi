@@ -1,8 +1,13 @@
+require('dotenv').config();
 const Web3 = require('web3');
+const HDWalletProvider = require("@truffle/hdwallet-provider");
+const NMC = process.env.MNEMONIC;  
 //provider
-const localProviderUrl = 'http://localhost:8545'
-const localProvider = new Web3.providers.WebsocketProvider(localProviderUrl)
-const web3 = new Web3(localProvider)
+const providerUrl = 'https://rinkeby.infura.io/v3/' + process.env.INFURA_TOKEN;
+
+const providerWithKey = new HDWalletProvider(NMC, providerUrl);
+const web3 = new Web3(providerWithKey);
+
 //uniswap
 const IRouter = require('@uniswap/v2-periphery/build/IUniswapV2Router02.json')
 const uRouter = new web3.eth.Contract(IRouter.abi,'0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D')
@@ -23,18 +28,20 @@ const Utils = require('../build/contracts/Utils.json')
 const utils = new web3.eth.Contract(Utils.abi,'',{data:Utils.bytecode})
 
 async function liquidity(amount0,amount1,amount2,amount3,amount4) {
-
-    myAccount = (await web3.eth.getAccounts())[0]
+    console.log('liquidity');
+    // myAccount = (await web3.eth.getAccounts())[0]
+    myAccount = (await web3.eth.getAccounts())[0];
+    console.log('account:', myAccount);
 
     //deploying token0
     let gasLimit, receipt, aux
-    gasLimit = await token0.deploy({arguments: ['Pineapple', 'PNA']}).estimateGas()
-    receipt = await token0.deploy({arguments: ['Pineapple', 'PNA']}).send({from: myAccount,gas: gasLimit})
+    gasLimit = await token0.deploy({arguments: ['Pineapple', 'PNA']}).estimateGas({from: myAccount})
+    receipt = await token0.deploy({arguments: ['Pineapple', 'PNA']}).send({from: myAccount})
     token0.options.address = receipt._address
 
     //deploying token1
-    gasLimit = await token1.deploy({arguments: ['Watermelon', 'WTM']}).estimateGas()
-    receipt = await token1.deploy({arguments: ['Watermelon', 'WTM']}).send({from: myAccount,gas: gasLimit})
+    gasLimit = await token1.deploy({arguments: ['Watermelon', 'WTM']}).estimateGas({from: myAccount})
+    receipt = await token1.deploy({arguments: ['Watermelon', 'WTM']}).send({from: myAccount})
     token1.options.address = receipt._address
 
     if (token0.options.address>token1.options.address) {aux=token0; token0=token1; token1=aux}
@@ -53,13 +60,13 @@ async function liquidity(amount0,amount1,amount2,amount3,amount4) {
 
     //minting token0
     amount4 = web3.utils.toWei(web3.utils.toBN(amount4))
-    gasLimit = await token0.methods.mint(myAccount, amount4).estimateGas()
-    await token0.methods.mint(myAccount, amount4).send({from:myAccount, gas:gasLimit})
+    gasLimit = await token0.methods.mint(myAccount, amount4).estimateGas({from: myAccount})
+    await token0.methods.mint(myAccount, amount4).send({from:myAccount})
     console.log(`${web3.utils.fromWei(amount4)} ${token0Symbol} minted`)
     
     //minting token1
-    gasLimit = await token1.methods.mint(myAccount, amount4).estimateGas()
-    await token1.methods.mint(myAccount, amount4).send({from:myAccount, gas:gasLimit})
+    gasLimit = await token1.methods.mint(myAccount, amount4).estimateGas({from: myAccount})
+    await token1.methods.mint(myAccount, amount4).send({from:myAccount})
     console.log(`${web3.utils.fromWei(amount4)} ${token1Symbol} minted\n`)
 
     //creating pair
@@ -68,10 +75,10 @@ async function liquidity(amount0,amount1,amount2,amount3,amount4) {
     //on uniswap
     amount0 = web3.utils.toWei(web3.utils.toBN(amount0),'ether')
     amount1 = web3.utils.toWei(web3.utils.toBN(amount1),'ether')
-    gasLimit = await token0.methods.approve(uRouter.options.address,amount0).estimateGas()
-    await token0.methods.approve(uRouter.options.address,amount0).send({from:myAccount, gas:gasLimit})
-    gasLimit = await token1.methods.approve(uRouter.options.address,amount1).estimateGas()
-    await token1.methods.approve(uRouter.options.address,amount1).send({from:myAccount, gas:gasLimit})
+    gasLimit = await token0.methods.approve(uRouter.options.address,amount0).estimateGas({from: myAccount})
+    await token0.methods.approve(uRouter.options.address,amount0).send({from:myAccount})
+    gasLimit = await token1.methods.approve(uRouter.options.address,amount1).estimateGas({from: myAccount})
+    await token1.methods.approve(uRouter.options.address,amount1).send({from:myAccount})
 
     gasLimit = await uRouter.methods.addLiquidity(
         token0.options.address,
@@ -82,7 +89,7 @@ async function liquidity(amount0,amount1,amount2,amount3,amount4) {
         0,
         myAccount,
         deadline
-    ).estimateGas()
+    ).estimateGas({from: myAccount})
     await uRouter.methods.addLiquidity(
         token0.options.address,
         token1.options.address,
@@ -92,7 +99,7 @@ async function liquidity(amount0,amount1,amount2,amount3,amount4) {
         0,
         myAccount,
         deadline
-    ).send({from:myAccount,gas:gasLimit})
+    ).send({from:myAccount})
     console.log(
         `Uniswap ${token0Symbol}/${token1Symbol} pair created\n`+
         `Reserves: ${web3.utils.fromWei(amount0)} ${token0Symbol} | ${web3.utils.fromWei(amount1)} ${token1Symbol}\n`+
@@ -102,10 +109,10 @@ async function liquidity(amount0,amount1,amount2,amount3,amount4) {
     //on sushiswap
     amount2 = web3.utils.toWei(web3.utils.toBN(amount2),'ether')
     amount3 = web3.utils.toWei(web3.utils.toBN(amount3),'ether')
-    gasLimit = await token1.methods.approve(sRouter.options.address,amount2).estimateGas()
-    await token0.methods.approve(sRouter.options.address,amount2).send({from:myAccount, gas:gasLimit})
-    gasLimit = await token1.methods.approve(sRouter.options.address,amount3).estimateGas()
-    await token1.methods.approve(sRouter.options.address,amount3).send({from:myAccount, gas:gasLimit})
+    gasLimit = await token1.methods.approve(sRouter.options.address,amount2).estimateGas({from: myAccount})
+    await token0.methods.approve(sRouter.options.address,amount2).send({from:myAccount})
+    gasLimit = await token1.methods.approve(sRouter.options.address,amount3).estimateGas({from: myAccount})
+    await token1.methods.approve(sRouter.options.address,amount3).send({from:myAccount})
     gasLimit = await sRouter.methods.addLiquidity(
         token0.options.address,
         token1.options.address,
@@ -115,7 +122,7 @@ async function liquidity(amount0,amount1,amount2,amount3,amount4) {
         0,
         myAccount,
         deadline
-    ).estimateGas()
+    ).estimateGas({from: myAccount})
     await sRouter.methods.addLiquidity(
         token0.options.address,
         token1.options.address,
@@ -125,7 +132,7 @@ async function liquidity(amount0,amount1,amount2,amount3,amount4) {
         0,
         myAccount,
         deadline
-    ).send({from:myAccount,gas:gasLimit})
+    ).send({from:myAccount})
     console.log(
         `Sushiswap ${token0Symbol}/${token1Symbol} pair created\n`+
         `Reserves: ${web3.utils.fromWei(amount2)} ${token0Symbol} | ${web3.utils.fromWei(amount3)} ${token1Symbol}\n`+
@@ -138,19 +145,20 @@ async function deploy(amount0,amount1,amount2,amount3,amount4) {
 
     await liquidity(amount0,amount1,amount2,amount3,amount4)
 
-    myAccount = (await web3.eth.getAccounts())[0]
+    // myAccount = (await web3.eth.getAccounts())[0]
+    myAccount = (await web3.eth.getAccounts())[0];
 
     //arbitrager
     let gasLimit, receipt
-    gasLimit = await arbitrager.deploy({arguments: [addr0, addr1]}).estimateGas()
-    receipt = await arbitrager.deploy({arguments: [addr0, addr1]}).send({from: myAccount,gas: gasLimit})
+    gasLimit = await arbitrager.deploy({arguments: [addr0, addr1]}).estimateGas({from: myAccount})
+    receipt = await arbitrager.deploy({arguments: [addr0, addr1]}).send({from: myAccount})
     arbitrager.options.address = receipt._address
 
     console.log(`Arbitrager contract deployed at ${arbitrager.options.address}\n`)
 
     //utils
-    gasLimit = await utils.deploy().estimateGas()
-    receipt = await utils.deploy().send({from: myAccount,gas: gasLimit})
+    gasLimit = await utils.deploy().estimateGas({from: myAccount})
+    receipt = await utils.deploy().send({from: myAccount})
     utils.options.address = receipt._address
 
     console.log(`Utils contract deployed at ${utils.options.address}\n`)

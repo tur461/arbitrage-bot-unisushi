@@ -8,6 +8,7 @@ const IPair = require('@uniswap/v2-core/build/IUniswapV2Pair.json')
 const IRouter = require('@uniswap/v2-periphery/build/IUniswapV2Router02.json')
 const Utils = require('../build/contracts/Utils.json')
 const IERC20 = require('@uniswap/v2-periphery/build/IERC20.json')
+const { isAddr } = require('./utils')
 
 //importing parameters from .env (mostly given)
 const addrArbitrager = process.env.ADDR_ARBITRAGE_CONTRACT
@@ -20,7 +21,7 @@ let addrToken1 = process.env.ADDR_TOKEN1
 const addrUFactory = process.env.ADDR_UFACTORY
 const addrURouter = process.env.ADDR_UROUTER
 const addrUtils = process.env.ADDR_UTILS
-const localDeplyment = process.env.LOCAL_DEPLOYMENT;
+const localDeployment = process.env.LOCAL_DEPLOYMENT;
 const priceToken0 = process.env.PRICE_TOKEN0
 const priceToken1 = process.env.PRICE_TOKEN1
 const privateKey = process.env.PRIVATE_KEY
@@ -31,7 +32,7 @@ if (addrToken0 > addrToken1) {aux=addrToken0; addrToken0=addrToken1; addrToken1=
 
 //setting up provider
 let web3
-if (localDeplyment) {
+if (localDeployment) {
 
     const localProviderUrl = 'http://localhost:8545'
     const localProvider = new Web3.providers.WebsocketProvider(localProviderUrl)
@@ -57,11 +58,20 @@ const utils = new web3.eth.Contract(Utils.abi, addrUtils)//because includes an s
 let uPair0,uPair1,sPair,myAccount,token0Name,token1Name,token0Symbol,token1Symbol
 async function asyncsVar() {
     //will be used to determine eth price later
-    uPair0 = new web3.eth.Contract(IPair.abi, (await uFactory.methods.getPair(addrEth, addrDai).call()) )
+    console.log('UF:', uFactory._address);
+    console.log('SF:', sFactory._address);
+    console.log('token0 options:', token0.options.address);
+    console.log('token1 options:', token1.options.address);
+    let addr = await uFactory.methods.getPair(addrEth, addrDai).call();
+    if(isAddr(addr)) uPair0 = new web3.eth.Contract(IPair.abi, addr);
+    else console.log('pair doesn\'t exist! eth-dai');
     //token pairs
-    uPair1 = new web3.eth.Contract(IPair.abi, (await uFactory.methods.getPair(token0.options.address, token1.options.address).call()) )
-    sPair = new web3.eth.Contract(IPair.abi, (await sFactory.methods.getPair(token0.options.address, token1.options.address).call()) )
-
+    addr = await uFactory.methods.getPair(token0.options.address, token1.options.address).call();
+    if(isAddr(addr)) uPair1 = new web3.eth.Contract(IPair.abi, addr)
+    else console.log('pair doesn\'t exist! ' + `${await token0.methods.symbol().call()}-${await token1.methods.symbol().call()}`);
+    addr = await sFactory.methods.getPair(token0.options.address, token1.options.address).call()
+    if(isAddr(addr)) sPair = new web3.eth.Contract(IPair.abi, addr)
+    else console.log('pair doesn\'t exist! ' + `${await token0.methods.symbol().call()}-${await token1.methods.symbol().call()}`);
     //account with you will be using to sign the transactions
     const accountObj = await web3.eth.accounts.privateKeyToAccount(privateKey)
     myAccount = accountObj.address
@@ -81,6 +91,7 @@ newBlockEvent.on('connected', () =>{console.log('\nBot listening!\n')})
 
 //look up for a profit whenever a new block is minned
 newBlockEvent.on('data', async function(blockHeader){
+    console.log('data event:', blockHeader);
 
     try {
 
@@ -269,7 +280,9 @@ newBlockEvent.on('data', async function(blockHeader){
 
 })
 
-newBlockEvent.on('error', console.error);
+newBlockEvent.on('error', (err) => {
+    console.log('===> ERROR:', err);
+});
 
 
 
