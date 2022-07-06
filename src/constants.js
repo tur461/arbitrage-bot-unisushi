@@ -24,11 +24,21 @@ const VAL = {
 // rinkeby = 4
 const CHAIN = {
     BSC: 97,
+    LOCAL: 0,
     ETHEREUM: 4,
+}
+
+const ABI = {
+    UTILS: require('../build/contracts/Utils.json').abi,
+    I_ERC20: require('@uniswap/v2-periphery/build/IERC20.json').abi,
+    I_PAIR: require('@uniswap/v2-core/build/IUniswapV2Pair.json').abi,
+    I_FACTORY: require('@uniswap/v2-core/build/IUniswapV2Factory.json').abi,
+    I_ROUTER: require('@uniswap/v2-periphery/build/IUniswapV2Router02.json').abi,
 }
 
 module.exports = {
     VAL,
+    ABI,
     CHAIN,
     ADDRESS,
 }
