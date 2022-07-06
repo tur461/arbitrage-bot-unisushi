@@ -1,16 +1,12 @@
 require('dotenv').config();
-const Web3 = require('web3');
+
 const { exit } = require('./utils');
 const Utils = require('../build/contracts/Utils.json');
-const HDWalletProvider = require("@truffle/hdwallet-provider");
 const Arbitrager = require('../build/contracts/Arbitrager.json');
 const IRouter = require('@uniswap/v2-periphery/build/IUniswapV2Router02.json')
 const ERC20PresetMinterPauser = require('@openzeppelin/contracts/build/contracts/ERC20PresetMinterPauser.json');
-const { ADDRESS, VAL } = require('./constants');
-
-const NMC = process.env.MNEMONIC;  
-const infuraToken = process.env.INFURA_TOKEN;
-const moralisToken = process.env.MORALIS_TOKEN;
+const { ADDRESS, VAL, CHAIN } = require('./constants');
+const { getContract, switchChain } = require('./mweb3');
 
 const MINTED = process.env.MINTED;
 const DEPLOYED = process.env.DEPLOYED;
@@ -18,18 +14,6 @@ const DO_LIQ_1 = process.env.DO_LIQ_1;
 const DO_LIQ_2 = process.env.DO_LIQ_2;
 
 const MINT_AMOUNT = 1e6;
-const BSC_URL = `https://speedy-nodes-nyc.moralis.io/${moralisToken}/bsc/testnet`;
-const ETHEREUM_URL = `https://speedy-nodes-nyc.moralis.io/${moralisToken}/eth/rinkeby`;
-
-// bsc testnet = 97
-// rinkeby = 4
-const CHAIN = {
-    BSC: 97,
-    ETHEREUM: 4,
-}
-
-const getContract = p => new web3.eth.Contract(...p);
-
 const tokenContractParams = [
     ERC20PresetMinterPauser.abi,
     '',
@@ -40,23 +24,6 @@ let web3, myAccount;
 let uRouter, sRouter; 
 let utils, arbitrager;
 let token0, token1;
-
-async function switchChain(chain) {
-    console.log('Switching chain..');
-    switch(chain) {
-        case CHAIN.BSC:
-            web3 = new Web3(new HDWalletProvider(NMC, BSC_URL));
-            myAccount = (await web3.eth.getAccounts())[0];
-            console.log('account:', myAccount, 'chainId:', await web3.eth.getChainId());
-            break;
-            case CHAIN.ETHEREUM:
-                web3 = new Web3(new HDWalletProvider(NMC, ETHEREUM_URL));
-                myAccount = (await web3.eth.getAccounts())[0];
-            console.log('account:', myAccount, 'chainId:', await web3.eth.getChainId());
-            break;
-        default: console.log('Err: Switching to an invalid chain!');
-    }
-}
 
 function initVars() {
     console.log('init variables for ethereum..');
@@ -77,7 +44,6 @@ function initVars() {
 }
 
 async function addLiquidity(a0, a1, a2, a3) {
-    await switchChain(CHAIN.ETHEREUM);
     const dat = await deployOnEthereum();
     await addLiquidityOnUniSwap({a2, a3}, dat);
     await addLiquidityOnSushiSwap({a0, a1}, dat);
@@ -226,6 +192,9 @@ process.argv[2] == '-b' ?
 exit();
 
 (async _ => {
+    const d = await switchChain(CHAIN.ETHEREUM);
+    web3 = d.web3;
+    myAccount = d.myAccount;
     await addLiquidity(...amounts);
     exit();
 })();

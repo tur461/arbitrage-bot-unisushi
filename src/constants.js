@@ -19,7 +19,16 @@ const VAL = {
     TKN1_NAME: 'Watermelon',
 }
 
+
+// bsc testnet = 97
+// rinkeby = 4
+const CHAIN = {
+    BSC: 97,
+    ETHEREUM: 4,
+}
+
 module.exports = {
     VAL,
+    CHAIN,
     ADDRESS,
 }
