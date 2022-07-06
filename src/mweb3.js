@@ -18,25 +18,24 @@ const getContract = p => new web3.eth.Contract(...p);
 
 async function switchChain(chain, isWS) {
     console.log('Switching chain..');
-    let provider, url;
+    let provider=null, url=null;
     switch(chain) {
-        case CHAIN.BSC: url = isWS ? BSC_URL_WS : BSC_URL;
-        // this should be last case
-        case CHAIN.ETHEREUM:
-            url = isWS ? ETHEREUM_URL_WS : ETHEREUM_URL;
-            provider = isWS ? 
-            new Web3.providers.WebsocketProvider(url) :
-            new HDWalletProvider(NMC, url);
-            web3 = new Web3(provider);
-            myAccount = (await web3.eth.getAccounts())[0];
-            chainId = await web3.eth.getChainId();
-            console.log(
-                'account:', myAccount, 
-                'chainId:', chainId
-            );
-        break;
-        default: console.log('Err: Switching to an invalid chain!');
+        case CHAIN.BSC: url = isWS ? BSC_URL_WS : BSC_URL; break;
+        case CHAIN.ETHEREUM: url = isWS ? ETHEREUM_URL_WS : ETHEREUM_URL; break;
+        default: url = console.log('Err: Switching to an invalid chain!');
     }
+    if(url) {
+        provider = isWS ? 
+        new Web3.providers.WebsocketProvider(url) :
+        new HDWalletProvider(NMC, url);
+        web3 = new Web3(provider);
+        myAccount = (await web3.eth.getAccounts())[0];
+        chainId = await web3.eth.getChainId();
+        console.log(
+            'account:', myAccount, 
+            'chainId:', chainId
+        );
+    } else {web3 = null; myAccount='0x'; chainId=-1}
     return {web3, myAccount, chainId};
 }
 
