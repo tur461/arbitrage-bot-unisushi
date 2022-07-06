@@ -1,6 +1,4 @@
-const ADDRESS = {
-    ZERO: '0x' + '0'.repeat(40),
-}
+const { ADDRESS } = require("./constants");
 
 function isAddr(addr) {
     if(
@@ -13,6 +11,12 @@ function isAddr(addr) {
     return !1;
 }
 
+function exit() {
+    console.log('terminating the process / thread peacefully..');
+    process.exit(0);
+}
+
 module.exports = {
+    exit,
     isAddr,
 }
